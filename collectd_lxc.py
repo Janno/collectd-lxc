@@ -89,24 +89,34 @@ def reader(input_data=None):
                 ### DISK
                 if metric == "blkio":
 
-                    with open(os.path.join(metrics[user_id][container_name][metric], 'blkio.throttle.io_service_bytes'), 'r') as f:
-                        lines = f.read()
+                    re_templ = lambda kw: re.compile("^ (?P<dev> [0-9:]+ ) \s %s \s (?P<val> [0-9]+ ) $" % kw, flags=re.VERBOSE | re.MULTILINE)
+                    def parse(regexp, s):
+                        d = {}
+                        intify = lambda (dev, val) : (dev, int(val))
+                        d.update(map(intify, regexp.findall(s)))
+                        return d
+                    parse_reads = lambda s : parse(re_read, s)
+                    parse_writes = lambda s : parse(re_write, s)
 
-                    bytes_read = int(re.search("Read\s+(?P<read>[0-9]+)", lines).group("read"))
-                    bytes_write = int(re.search("Write\s+(?P<write>[0-9]+)", lines).group("write"))
+                    with open(os.path.join(metrics[user_id][container_name][metric], 'blkio.throttle.io_service_bytes'), 'r') as f:
+                        byte_lines = f.read()
 
                     with open(os.path.join(metrics[user_id][container_name][metric], 'blkio.throttle.io_serviced'), 'r') as f:
-                        lines = f.read()
+                        ops_lines = f.read()
 
-                    ops_read = int(re.search("Read\s+(?P<read>[0-9]+)", lines).group("read"))
-                    ops_write = int(re.search("Write\s+(?P<write>[0-9]+)", lines).group("write"))
+                    all_bytes_read = parse_reads(byte_lines)
+                    all_bytes_write = parse_writes(byte_lines)
 
-                    values = collectd.Values(plugin_instance=lxc_fullname,
-                                             type="gauge", plugin="lxc_blkio")
-                    values.dispatch(type_instance="bytes_read", values=[bytes_read])
-                    values.dispatch(type_instance="bytes_write", values=[bytes_write])
-                    values.dispatch(type_instance="ops_read", values=[ops_read])
-                    values.dispatch(type_instance="ops_write", values=[ops_write])
+                    all_ops_read = parse_reads(ops_lines)
+                    all_ops_write = parse_writes(ops_lines)
+
+                    for k in all_bytes_read:
+                        values = collectd.Values(plugin_instance=lxc_fullname,
+                                                 type="%s" % k, plugin="lxc_blkio")
+                        values.dispatch(type_instance="bytes_read", values=[all_bytes_read[k]])
+                        values.dispatch(type_instance="bytes_write", values=[all_bytes_write[k]])
+                        values.dispatch(type_instance="ops_read", values=[all_ops_read[k]])
+                        values.dispatch(type_instance="ops_write", values=[all_ops_write[k]])
 
                 ### End DISK
 
