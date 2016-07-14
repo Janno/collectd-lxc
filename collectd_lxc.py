@@ -36,7 +36,7 @@ def reader(input_data=None):
     for user_id in metrics:
         # foreach container
         for container_name in metrics[user_id]:
-            lxc_fullname = "{0}__{1}".format(user_id, container_name)
+            lxc_fullname = "{0}_{1}".format(user_id, container_name)
             for metric in metrics[user_id][container_name]:
                 ### Memory
                 if metric == "memory":
@@ -57,7 +57,7 @@ def reader(input_data=None):
                             mem_swap = int(data[1])
 
                     values = collectd.Values(plugin_instance=lxc_fullname,
-                                             type="gauge", plugin="lxc_memory")
+                                             type="memory", plugin="lxc_memory")
                     values.dispatch(type_instance="rss", values=[mem_rss])
                     values.dispatch(type_instance="cache", values=[mem_cache])
                     values.dispatch(type_instance="swap", values=[mem_swap])
@@ -80,7 +80,7 @@ def reader(input_data=None):
                             cpu_system = int(data[1])
 
                     values = collectd.Values(plugin_instance=lxc_fullname,
-                                             type="gauge", plugin="lxc_cpu")
+                                             type="cpu", plugin="lxc_cpu")
                     values.dispatch(type_instance="user", values=[cpu_user])
                     values.dispatch(type_instance="system", values=[cpu_system])
 
@@ -116,14 +116,15 @@ def reader(input_data=None):
 		        devname = None
 		        with open('/sys/dev/block/%s/uevent' % k, 'r') as f:
 			    devname = re_dev.search(f.read()).group('devname')
-			    devname = re.sub("[^a-zA-Z0-9]", '_', devname)
+			    #devname = re.sub("[^a-zA-Z0-9]", '_', devname)
 
                         values = collectd.Values(plugin_instance=lxc_fullname,
-                                                 type="%s" % devname, plugin="lxc_blkio")
-                        values.dispatch(type_instance="bytes_read", values=[all_bytes_read[k]])
-                        values.dispatch(type_instance="bytes_write", values=[all_bytes_write[k]])
-                        values.dispatch(type_instance="ops_read", values=[all_ops_read[k]])
-                        values.dispatch(type_instance="ops_write", values=[all_ops_write[k]])
+                                                 type="disk_octets", plugin="lxc_blkio")
+                        values.dispatch(type_instance="%s" % devname, values=[all_bytes_read[k], all_bytes_write[k]])
+
+                        values = collectd.Values(plugin_instance=lxc_fullname,
+                                                 type="disk_ops", plugin="lxc_blkio")
+                        values.dispatch(type_instance="%s" % devname, values=[all_ops_read[k], all_ops_write[k]])
 
                 ### End DISK
 
@@ -155,13 +156,16 @@ def reader(input_data=None):
                                 tx_errors = int(tx_data[2])
 
                                 values = collectd.Values(plugin_instance=lxc_fullname,
-                                                         type="gauge", plugin="lxc_net")
-                                values.dispatch(type_instance="tx_bytes_{0}".format(interface), values=[tx_bytes])
-                                values.dispatch(type_instance="rx_bytes_{0}".format(interface), values=[rx_bytes])
-                                values.dispatch(type_instance="tx_packets_{0}".format(interface), values=[tx_packets])
-                                values.dispatch(type_instance="rx_packets_{0}".format(interface), values=[rx_packets])
-                                values.dispatch(type_instance="tx_errors_{0}".format(interface), values=[tx_errors])
-                                values.dispatch(type_instance="rx_errors_{0}".format(interface), values=[rx_errors])
+                                                         type="if_octets", plugin="lxc_net")
+                                values.dispatch(type_instance="{0}".format(interface), values=[rx_bytes, tx_bytes])
+
+                                values = collectd.Values(plugin_instance=lxc_fullname,
+                                                         type="if_packets", plugin="lxc_net")
+                                values.dispatch(type_instance="{0}".format(interface), values=[rx_packets, tx_packets])
+
+                                values = collectd.Values(plugin_instance=lxc_fullname,
+                                                         type="if_errors", plugin="lxc_net")
+                                values.dispatch(type_instance="{0}".format(interface), values=[rx_errors, tx_errors])
                 ### End Network
 
 
