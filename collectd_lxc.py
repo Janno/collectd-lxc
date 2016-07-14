@@ -110,9 +110,15 @@ def reader(input_data=None):
                     all_ops_read = parse_reads(ops_lines)
                     all_ops_write = parse_writes(ops_lines)
 
+                    re_dev = re.compile('^DEVNAME=(?P<devname>.+)$', re.MULTILINE)
+
                     for k in all_bytes_read:
+		        devname = None
+		        with open('/sys/dev/block/%s/uevent' % k, 'r') as f:
+			    devname = re_dev.search(f.read()).group('devname')
+
                         values = collectd.Values(plugin_instance=lxc_fullname,
-                                                 type="%s" % k, plugin="lxc_blkio")
+                                                 type="%s" % devname, plugin="lxc_blkio")
                         values.dispatch(type_instance="bytes_read", values=[all_bytes_read[k]])
                         values.dispatch(type_instance="bytes_write", values=[all_bytes_write[k]])
                         values.dispatch(type_instance="ops_read", values=[all_ops_read[k]])
