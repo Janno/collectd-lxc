@@ -116,6 +116,7 @@ def reader(input_data=None):
 		        devname = None
 		        with open('/sys/dev/block/%s/uevent' % k, 'r') as f:
 			    devname = re_dev.search(f.read()).group('devname')
+			    devname = devname.replace('-', '_')
 
                         values = collectd.Values(plugin_instance=lxc_fullname,
                                                  type="%s" % devname, plugin="lxc_blkio")
