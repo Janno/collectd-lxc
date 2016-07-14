@@ -95,8 +95,8 @@ def reader(input_data=None):
                         intify = lambda (dev, val) : (dev, int(val))
                         d.update(map(intify, regexp.findall(s)))
                         return d
-                    parse_reads = lambda s : parse(re_read, s)
-                    parse_writes = lambda s : parse(re_write, s)
+                    parse_reads = lambda s : parse(re_templ("Read"), s)
+                    parse_writes = lambda s : parse(re_templ("Write"), s)
 
                     with open(os.path.join(metrics[user_id][container_name][metric], 'blkio.throttle.io_service_bytes'), 'r') as f:
                         byte_lines = f.read()
